@@ -33,10 +33,20 @@ main = do conn <- open dbName
           mapM_ (saveNote d . parseNote . fromOnly) r
           close conn
 
+eatSpan :: Text -> Text
+eatSpan = T.replace "</span>" ""
+        . T.concat
+        . map' (T.tail . T.dropWhile (/= '>'))
+        . T.splitOn "<span"
+  where map' _ [] = []
+        map' f (h:t) = h : map f t
+
 parseNote :: Text -> Note
-parseNote t = Note title (cleanup body)
-  where (title,body) = T.breakOn "<div>" t
+parseNote = aux . T.lines . cleanup
+  where aux [] = Note "" ""
+        aux (h:body) = Note h (T.unlines body)
         cleanup = T.strip
+                . eatSpan
                 . T.replace "<br>" "\n"
                 . T.replace "<div>" "\n"
                 . T.replace "</div>" ""
